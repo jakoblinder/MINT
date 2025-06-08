@@ -29,8 +29,8 @@
 
          procedure (func), pointer :: f_ptr => null ()
 
-         xmin = -10d0
-         xmax =  10d0
+         xmin = -1d10
+         xmax =  0d0
 
          ! Decide which function to integrate:
          f_ptr => gauss
@@ -105,7 +105,7 @@
          ! so that even if x(i) lies between 0 and 1, we can still set arbitrary integral boundaries
          ! - they become very fast very unstable though.
          ! This mapping should be inverted here if we want to set the first two values to a specific value:
-         x12 = [inverseMapping(x12(1)), inverseMapping(x12(2))]
+         x12 = [inverseMapping(x12(1), "linear"), inverseMapping(x12(2), "linear")]
 
 
          ! The integration grid can be kept! It should be optimal also for the remaining two dimensions.
