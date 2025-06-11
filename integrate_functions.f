@@ -1,4 +1,4 @@
-      program integrate_gauss
+      program integrate_functions
          use functions
          implicit none
          integer :: i, j, pdim, ndim, nevents, ncall1, itmx1, ncall2, itmx2
@@ -29,7 +29,7 @@
 
          flg_integration   = .true.
          flg_2dintegration = .false.
-         flg_generation    = .true.
+         flg_generation    = .false.
 
 
          ! Number of points to improve the grid:
@@ -192,4 +192,4 @@
                func2d = func2d / jac
             end function func2d
 
-      end program integrate_gauss
+      end program integrate_functions
