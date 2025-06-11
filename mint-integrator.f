@@ -5,7 +5,7 @@
 !
 ! ncalls0 = # of calls per iteration
 !
-! nitmax = # of iterations
+! nitmax  = # of iterations
 !
 ! fun(xx,www,ifirst): returns the function to be integrated multiplied by www;
 !                     xx(1:ndim) are the variables of integration
@@ -63,6 +63,8 @@
 ! xint: real
 !     Output value of the integral when called with imode=0,
 !     input value of the integral when called with imode=1 (cannot be zero here!)
+!     This is the initial value which is used, after exponentiating it with (1/ndim), to compute the upper bounds, i.e. ymax.
+!     Since it is determined in at the imode=0 stage, it corresponds to the integral of the absolute value of the function.
 !
 ! xacc(0:nintervals,ndim):
 !     distribution of the accumulated value for each dimension; it is used to compute the optimal grid.

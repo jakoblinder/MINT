@@ -3,7 +3,7 @@
          implicit none
          integer :: i, j, pdim, ndim, nevents, ncall1, itmx1, ncall2, itmx2
          parameter (ndim=4, pdim=1)
-         real*8 :: xgrid(0:50,ndim), xint, ymax(50,ndim), sigtot, error, estimn, errorn, estimp, errorp
+         real*8 :: xgrid(0:50,ndim), xint, ymax(50,ndim), intabs_val, intabs_err, estimn, errorn, estimp, errorp
          real*8 :: xgenerated(pdim), xtransformed(pdim), xmin, xmax
          common/bounds/xmin, xmax
 
@@ -34,14 +34,18 @@
 
          ! Number of points to improve the grid:
          ncall1 = 1000000
-         ! #grid iterations:
+         ! Number of grid improvement iterations (MaXimum number of ITerations to improve the grid):
          itmx1  = 5
 
          ! Set up the grid
          call cpu_time(t_start)
-         call mint(func_wrap, ndim, ncall1, itmx1, 0, xgrid, xint, ymax, sigtot, error)
+         call mint(func_wrap, ndim, ncall1, itmx1, 0, xgrid, xint, ymax, intabs_val, intabs_err)
          call cpu_time(t_end)
-         write(*,*) sigtot, error
+         write(*,*) 'Integral over the absolute value of the function:'
+         write(*,*) 'Int[ |f| ]: ', intabs_val, ' +- ', intabs_err
+         ! Note: xint == intabs_val, since the function is integrated over the absolute value and xint is used as
+         !       the initial value for computing the upper bound of the function in the next, imode = 1, step,
+         !       where xint will be an input, not an output.
          write(*,*) 'Grid setup time (s): ', t_end - t_start
          ! write(*,*) xgrid(:,1)
 
@@ -55,23 +59,30 @@
             ifold(2)=1
             ifold(3)=1
             ifold(4)=1
-            ! # of points used for the integration:
+
+            ! Number of points used for the integration:
             ncall2=100000
-            ! TODO: What was this again?
-            itmx2=5
+            ! Number of integration iterations and upper bound improvements, all done with a number of calls ncall2 to the
+            ! integrated function. The different integrand results are combined and only the final result is returned.
+            ! Note that this basically corresponds to increasing the number of calls ncall2 by a factor of itmx2.
+            itmx2=1
 
             call cpu_time(t_start)
+
+            ! Compute the positive contribution to the integral:
+            negflag = .false.
+            call mint(func_wrap, ndim, ncall2, itmx2, 1, xgrid, xint, ymax, estimp, errorp)
+            ! Compute the negative contribution to the integral:
             negflag = .true.
             call mint(func_wrap, ndim, ncall2, itmx2, 1, xgrid, xint, ymax, estimn, errorn)
             negflag = .false.
-            call mint(func_wrap, ndim, ncall2, itmx2, 1, xgrid, xint, ymax, estimp, errorp)
+
             call cpu_time(t_end)
             write(*,*) estimp,' +- ', errorp
             write(*,*) estimn,' +- ', errorn
 
-            write(*,*) (estimp+estimn),' +- ', sqrt(errorp**2+errorn**2)
+            write(*,*) (estimp + estimn),' +- ', sqrt(errorp**2 + errorn**2)
             write(*,*) 'Integration time (s): ', t_end - t_start
-            negflag = .false.
          end if
 
 
