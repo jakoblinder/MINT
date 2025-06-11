@@ -27,18 +27,6 @@
          ! Timer variables
          real*8 :: t_start, t_end
 
-         abstract interface
-            function int_func_wrap (x,weight,ifl)
-               implicit none
-               real*8 :: int_func_wrap
-               integer, parameter :: ndim=4
-               real*8, intent(in) :: x(ndim), weight
-               integer, intent(in) :: ifl
-            end function int_func_wrap
-         end interface
-
-         procedure (int_func_wrap), pointer :: fwrap_ptr => null ()
-
          flg_integration   = .true.
          flg_2dintegration = .false.
          flg_generation    = .true.
@@ -102,19 +90,18 @@
             ! Output:
             ! 1. xgenerated - generated random number of dimension pdim.
 
-            fwrap_ptr => func_wrap
             write(*,*) "Initialise generation of random numbers:"
-            call gen(fwrap_ptr, pdim, xgrid, ymax, 0, xgenerated)
+            call gen(func_wrap, pdim, xgrid, ymax, 0, xgenerated)
 
             file_events = 'events.lhe'
             ! open(newunit=unit_events, file=trim(file_events), status='unknown')
 
             nevents = 1
             write(*,*) "Generating ", nevents, " events and writing them to file: ", trim(file_events)
-            call gen(fwrap_ptr, 1, xgrid, ymax, 1, xgenerated)
+            call gen(func_wrap, 1, xgrid, ymax, 1, xgenerated)
             write(*,*) xgenerated
             ! do i = 1, nevents
-            !    call gen(fwrap_ptr, pdim, xgrid, ymax, 1, xgenerated)
+            !    call gen(func_wrap, pdim, xgrid, ymax, 1, xgenerated)
             !    ! do j=1, pdim
             !    !    xtransformed(j) = mapping(xgenerated(j), map_type)
             !    ! end do
@@ -131,7 +118,7 @@
             ! ! close(unit_events)
 
             write(*,*) "Finished generating events."
-            call gen(fwrap_ptr, pdim, xgrid, ymax, 3, xgenerated)
+            call gen(func_wrap, pdim, xgrid, ymax, 3, xgenerated)
          end if
 
 
