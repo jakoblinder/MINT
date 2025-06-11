@@ -106,6 +106,7 @@
       integer kdim,kint,kpoint,nit,ncalls,ibin,iret,nintcurr,ifirst
       real * 8 random
       external random,fun
+      character(len=30) filename
       if(imode.eq.0) then
          do kdim=1,ndim
             ifold(kdim)=1
@@ -210,10 +211,14 @@
       enddo
       if(imode.eq.0) then
 ! iteration is finished; now rearrange the grid
+         write(filename, '(A,I0,A)') 'xg', nit, '.top'
+         call regridplotopen(filename)
          do kdim=1,ndim
-            call regrid(xacc(0,kdim),xgrid(0,kdim),
-     #           nhits(1,kdim),nintervals,nit)
+   !          call regrid(xacc(0,kdim),xgrid(0,kdim),
+   !   #           nhits(1,kdim),kdim,nintervals,nit)
+              call regrid(xacc(0:nintervals,kdim),xgrid(0:nintervals,kdim),nhits(1:nintervals,kdim),kdim,nintervals,nit)
          enddo
+         call regridplotclose()
       endif
 ! the abs is to avoid tiny negative values
       etot=sqrt(abs(etot-vtot**2)/ncalls)
@@ -242,38 +247,72 @@
       goto 10
       end
 
-      subroutine regrid(xacc,xgrid,nhits,nint,nit)
+      subroutine regridplotopen(filename)
       implicit none
-      integer  nint,nhits(nint),nit
+      character *(*) filename
+      integer iun
+      logical iunopen
+      common/cregrid/iun,iunopen
+      data iunopen/.false./
+      open(newunit=iun,file=trim(filename),status='unknown')
+      iunopen=.true.
+      end
+
+      subroutine regridplotclose
+      implicit none
+      integer iun
+      logical iunopen
+      common/cregrid/iun,iunopen
+      close(iun)
+      iunopen=.false.
+      end
+
+
+      subroutine regrid(xacc,xgrid,nhits,kdim,nint,nit)
+      implicit none
+      integer  nint,nhits(nint),kdim,nit,iun
       real * 8 xacc(0:nint),xgrid(0:nint)
       real * 8 xn(100),r
       integer kint,jint
+      logical iunopen
+      common/cregrid/iun,iunopen
       do kint=1,nint
-! xacc (xerr) already containe a factor equal to the interval size
+! xacc (xerr) already contain a factor equal to the interval size
 ! Thus the integral of rho is performed by summing up
          if(nhits(kint).ne.0) then
-            xacc(kint)= xacc(kint-1)
-     #           + abs(xacc(kint))/nhits(kint)
+            xacc(kint) = xacc(kint-1) + abs(xacc(kint))/ nhits(kint)
          else
-            xacc(kint)=xacc(kint-1)
+            xacc(kint) = xacc(kint-1)
          endif
       enddo
+      ! xacc(kint) correspond now to the function I_l defined in the
+      ! paper, i.e. the sum of the contributions of the integral over
+      ! the absolut value of the function divided by the number of
+      ! calls in each bin: I_l = \sum_{j=1}^{n} R_j / N_j.
+      ! xacc(kint) = \int_{0}^{xgrid(kint)} |f(x)| dx.
       do kint=1,nint
          xacc(kint)=xacc(kint)/xacc(nint)
       enddo
-      write(11,*) 'set limits x 0 1 y 0 1'
-      write(11,*) 0, 0
+      ! Deviding each xacc(kint) by the total integral:
+      ! xacc(kint) = \int_{0}^{xgrid(kint)} |f(x)| dx / \int_{0}^{1} |f(x)| dx
+      ! This is the cumulative distribution function (CDF) of the
+      ! absolute value of the function.
+      write(iun,*) 'set limits x 0 1 y 0 1'
+      write(iun,*) ' title top "dim=',kdim,'"'
+      write(iun,*) 0, 0
       do kint=1,nint
-         write(11,*) xgrid(kint),xacc(kint)
+         write(iun,*) xgrid(kint),xacc(kint)
       enddo
-      write(11,*) 'join 0'
+      write(iun,*) 'join 0'
 
       do kint=1,nint
-         r=dble(kint)/nint
+         ! r = l / m
+         !   = 'index of cell' / 'total number of cells'
+         r = dble(kint)/ nint
 
-         write(11,*) 0, r
-         write(11,*) 1, r
-         write(11,*) ' join'
+         write(iun,*) 0, r
+         write(iun,*) 1, r
+         write(iun,*) ' join'
 
          do jint=1,nint
             if(r.lt.xacc(jint)) then
@@ -294,11 +333,11 @@
 !         xgrid(kint)=(xn(kint)+2*xgrid(kint))/3
 !         xgrid(kint)=(xn(kint)+xgrid(kint)*log(dble(nit)))
 !     #        /(log(dble(nit))+1)
-         write(11,*) xgrid(kint), 0
-         write(11,*) xgrid(kint), 1
-         write(11,*) ' join'
+         write(iun,*) xgrid(kint), 0
+         write(iun,*) xgrid(kint), 1
+         write(iun,*) ' join'
       enddo
-      write(11,*) ' newplot'
+      write(iun,*) ' newplot'
       end
 
       subroutine nextlexi(ndim,iii,kkk,iret)

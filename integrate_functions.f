@@ -65,7 +65,7 @@
             ! Number of integration iterations and upper bound improvements, all done with a number of calls ncall2 to the
             ! integrated function. The different integrand results are combined and only the final result is returned.
             ! Note that this basically corresponds to increasing the number of calls ncall2 by a factor of itmx2.
-            itmx2=1
+            itmx2=5
 
             call cpu_time(t_start)
 
