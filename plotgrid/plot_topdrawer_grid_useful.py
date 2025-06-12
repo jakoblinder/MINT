@@ -88,11 +88,19 @@ def plot_grids_to_pdf(topdrawer_file, pdf_file, folding=None):
     grids, titles, gridlines, limits, scatter_flags = parse_topdrawer_grid(topdrawer_file)
     with PdfPages(pdf_file) as pdf:
         # Adjust the list specifying the folding for each dimension:
-        # If is only has a length of k but there are n dimensions,
-        # it is assumed that the last n - k entries are not folded.
+        # If it only has a length of k but there are n dimensions,
+        # it is assumed that the FIRST n - k entries are not folded.
+        # Moreover, the first entry of the folding array specifies
+        # the folding factor of the LAST dimension, the second entry
+        # the second to last, etc.. This is done, because in POWHEG you
+        # can only specify the folding factor for the last 3 dimensions.
+        # So giving -f 2 5 10 (-> folding = [1, 10, 5, 2] for 4 dimensions)
+        # would specify the folding of those 3 radiation variables in the
+        # opposite order.
         if folding:
             fold_tmp = folding.copy()
             folding = [int(fold_tmp[i]) if i < len(fold_tmp) else 1 for i in range(len(grids))]
+            folding = folding[::-1]  # Reverse it to match the desired order.
             assert all([nintervals%f == 0 for f in folding]), "The folding factors must be a divisor of the number of intervals."
         for idim, ((x, y), title, join_lines, lim, scatter) in enumerate(zip(grids, titles, gridlines, limits, scatter_flags)):
             plt.figure()
@@ -167,7 +175,14 @@ if __name__ == "__main__":
         nargs="*",
         type=float,
         default=None,
-        help="Optional list of numbers (one per dimension or less)."
+        help=(
+            "Optional list of numbers (one per dimension or less), "
+            "visualising which blocks MINT is adding during the folding. "
+            "Note that the folding numbers are specified in reverse order, i.e. "
+            "the first entry is the folding factor of the last dimension, "
+            "the second entry of the second to last dimension, etc.."
+            "If not specified, no folding is visualised."
+        )
     )
 
     args = parser.parse_args()
