@@ -38,16 +38,16 @@
                ndim = size(x)
 
                ! Set the function pointer to the desired function:
-               f_ptr1 => gauss1d
-               xmin = -1d1
-               xmax =  1d1
+               ! f_ptr1 => gauss1d
+               ! xmin = -1d1
+               ! xmax =  1d1
                ! [ -Inf, +Inf] => 1
 
-               ! f_ptr1 => gauss1d
-               ! f_ptr2 => gauss1d2
-               ! flg_sub2function = .true.
-               ! xmin = -5d0
-               ! xmax =  5d0
+               f_ptr1 => gauss1d
+               f_ptr2 => gauss1d2
+               flg_sub2function = .true.
+               xmin = -5d0
+               xmax =  5d0
                ! [ -Inf, +Inf] => 0
 
                ! f_ptr1 => exponential
@@ -87,11 +87,14 @@
                   xmapped(i) = mapping(x(i), map_type)
                end do
 
+               ! Return the 1D functin value at the mapped point exponentiated by the required dimension
+               ! and multiply by the jacobian.
                func_wrap = 1d0
                do i=1, ndim
                   func_wrap = func_wrap * f_ptr1(xmapped(i)) * jacobian(x(i), map_type)
                end do
 
+               ! If the second function is used, subtract it from the first one.
                if (flg_sub2function) then
                   func_tmp = 1d0
                   do i=1, ndim
@@ -100,8 +103,10 @@
                   func_wrap = func_wrap - func_tmp
                end if
 
+               ! Multipy the function value by the weight.
                func_wrap = func_wrap * weight
 
+               ! Accumulate the function value. Needed for the folding functionality of MINT.
                accum = accum + func_wrap
             end function func_wrap
 
@@ -114,7 +119,7 @@
                real*8, parameter :: pi=3.141592653589793d0
                real*8 :: mean1, stddev1
 
-               mean1   = 0.0d0
+               mean1   = -1.5d0
                stddev1 = 0.5d0
 
                res = ((1.0d0 / (stddev1 * sqrt(2.0d0 * pi)))) * exp(-0.5d0 * ((x - mean1) / stddev1)**2)
@@ -129,7 +134,7 @@
                real*8, parameter :: pi=3.141592653589793d0
                real*8 :: mean2, stddev2
 
-               mean2   = 0.5d0
+               mean2   = 1.5d0
                stddev2 = 0.5d0
 
                res = ((1.0d0 / (stddev2 * sqrt(2.0d0 * pi)))) * exp(-0.5d0 * ((x - mean2) / stddev2)**2)
