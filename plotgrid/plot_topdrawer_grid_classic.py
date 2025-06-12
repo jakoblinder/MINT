@@ -110,23 +110,16 @@ def plot_grids_to_pdf(topdrawer_file, pdf_file):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Plot MINT topdrawer grid file to PDF (one page per dimension).")
+
     parser.add_argument(
         "input",
-        nargs="?",
-        default="pwg-xg2-xgrid-btl-0050.top",
+        nargs="+",
         type=Path,
-        help="Input topdrawer file for grid, e.g.: pwg-xg2-xgrid-btl-0001.top"
+        help="Input topdrawer file(s) for grid, supports glob patterns (e.g. pwg-xg2-xgrid-btl-*.top)"
     )
-    parser.add_argument(
-        "output",
-        nargs="?",
-        default=None,
-        type=Path,
-        help="Output PDF file"
-    )
+
     args = parser.parse_args()
 
-    if not args.output:
-        args.output = args.input.with_suffix('.pdf')
-
-    plot_grids_to_pdf(args.input, args.output)
+    for infile in args.input:
+        output = infile.with_suffix('.pdf')
+        plot_grids_to_pdf(infile, output)

@@ -97,7 +97,7 @@ def plot_grids_to_pdf(topdrawer_file, pdf_file):
                 old_gridpoints = x
                 xacc = y
                 # Plot cumulative distribution of the function:
-                plt.plot(old_gridpoints, xacc, color='blue')
+                plt.plot(old_gridpoints, xacc, color='blue', label='CDF')
 
                 # Throw away the first nintervals points, since they are not directly part of the grid.
                 join_lines = join_lines[nintervals:]
@@ -108,49 +108,50 @@ def plot_grids_to_pdf(topdrawer_file, pdf_file):
                 #     plt.plot([x0, x1], [y0, y1], color='black', alpha=0.45, linestyle='-', linewidth=0.8)
                 # plt.grid(True)
                 # Plot old_gridpoints as black vertical lines
-                for xval in old_gridpoints:
-                    plt.axvline(x=xval, color='black', linestyle='-', linewidth=0.8, alpha=0.45)
-                for xval in new_gridpoints:
-                    plt.axvline(x=xval, color='red', linestyle='-', linewidth=0.8, alpha=0.6)
+                for i, xval in enumerate(old_gridpoints):
+                    if i == 0:
+                        plt.axvline(x=xval, color='black', linestyle='-', linewidth=0.8, alpha=0.45, label='Old grid')
+                    else:
+                        plt.axvline(x=xval, color='black', linestyle='-', linewidth=0.8, alpha=0.45)
+                for i, xval in enumerate(new_gridpoints):
+                    if i == 0:
+                        plt.axvline(x=xval, color='red', linestyle='-', linewidth=0.8, alpha=0.6, label='New grid')
+                    else:
+                        plt.axvline(x=xval, color='red', linestyle='-', linewidth=0.8, alpha=0.6)
                 # Try to restore the original function:
                 dxaccdx = []
                 for i in range(len(xacc)-1):
                     dxaccdx.append( (xacc[i+1] - xacc[i])/ (old_gridpoints[i+1] - old_gridpoints[i]) )
 
+                # Normalise dxaccdx to the maximum value, so that it fits in the plot.
                 maxdxaccdx = max(dxaccdx)
                 dxaccdx = [dxaccdx[i]/ maxdxaccdx for i in range(len(dxaccdx))]
 
                 old_midths = [(old_gridpoints[i] + old_gridpoints[i+1]) / 2 for i in range(len(old_gridpoints)-1)]
-                plt.plot(old_midths, dxaccdx, color='green')
-            plt.xlabel('x')
-            plt.ylabel('y')
+                plt.plot(old_midths, dxaccdx, color='green', label='~ PDF')
+            plt.xlabel('Grid points $x_i$')
+            # plt.ylabel('y')
             plt.title(title)
             # Set axis limits if available
             if lim and lim[0] and lim[1]:
                 plt.xlim(*lim[0])
                 plt.ylim(*lim[1])
+            plt.legend()
             pdf.savefig()
             plt.close()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Plot MINT topdrawer grid file to PDF (one page per dimension).")
+
     parser.add_argument(
         "input",
-        nargs="?",
-        default="pwg-xg2-xgrid-btl-0050.top",
+        nargs="+",
         type=Path,
-        help="Input topdrawer file for grid, e.g.: pwg-xg2-xgrid-btl-0001.top"
+        help="Input topdrawer file(s) for grid, supports glob patterns (e.g. pwg-xg2-xgrid-btl-*.top)"
     )
-    parser.add_argument(
-        "output",
-        nargs="?",
-        default=None,
-        type=Path,
-        help="Output PDF file"
-    )
+
     args = parser.parse_args()
 
-    if not args.output:
-        args.output = args.input.with_suffix('.pdf')
-
-    plot_grids_to_pdf(args.input, args.output)
+    for infile in args.input:
+        output = infile.with_suffix('.pdf')
+        plot_grids_to_pdf(infile, output)
