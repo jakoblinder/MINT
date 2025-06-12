@@ -83,11 +83,18 @@ def parse_topdrawer_grid(filename):
         scatter_flags.append(scatter)
     return grids, dim_titles, gridlines, limits, scatter_flags
 
-def plot_grids_to_pdf(topdrawer_file, pdf_file):
+def plot_grids_to_pdf(topdrawer_file, pdf_file, folding=None):
     nintervals = 50  # Default number of intervals, hardcoded in MINT.
     grids, titles, gridlines, limits, scatter_flags = parse_topdrawer_grid(topdrawer_file)
     with PdfPages(pdf_file) as pdf:
-        for (x, y), title, join_lines, lim, scatter in zip(grids, titles, gridlines, limits, scatter_flags):
+        # Adjust the list specifying the folding for each dimension:
+        # If is only has a length of k but there are n dimensions,
+        # it is assumed that the last n - k entries are not folded.
+        if folding:
+            fold_tmp = folding.copy()
+            folding = [int(fold_tmp[i]) if i < len(fold_tmp) else 1 for i in range(len(grids))]
+            assert all([nintervals%f == 0 for f in folding]), "The folding factors must be a divisor of the number of intervals."
+        for idim, ((x, y), title, join_lines, lim, scatter) in enumerate(zip(grids, titles, gridlines, limits, scatter_flags)):
             plt.figure()
             # Plot as scatter if plot symbol is present, else as line
             if scatter:
@@ -101,23 +108,29 @@ def plot_grids_to_pdf(topdrawer_file, pdf_file):
 
                 # Throw away the first nintervals points, since they are not directly part of the grid.
                 join_lines = join_lines[nintervals:]
+                # Get the new grid points from the join_lines array.
                 new_gridpoints = [join_lines[i][0][0] for i in range(len(join_lines))]
-                # # Plot each grid line segment in black, alpha=0.5, no marker
-                # for seg in join_lines:
-                #     (x0, y0), (x1, y1) = seg
-                #     plt.plot([x0, x1], [y0, y1], color='black', alpha=0.45, linestyle='-', linewidth=0.8)
-                # plt.grid(True)
+
                 # Plot old_gridpoints as black vertical lines
                 for i, xval in enumerate(old_gridpoints):
                     if i == 0:
                         plt.axvline(x=xval, color='black', linestyle='-', linewidth=0.8, alpha=0.45, label='Old grid')
                     else:
                         plt.axvline(x=xval, color='black', linestyle='-', linewidth=0.8, alpha=0.45)
+
+                # Plot new_gridpoints as red vertical lines
+                # If folding is specified, mark the grid points being on the edge where the new fold starts in orange.
+                # E.g.: folding=[1, 2, 5, 10] -> Mark the 50/2=25th, 50/5=10th, and 50/10=5th grid points
+                #       of the 2nd, 3rd and 4th dimension in purple.
                 for i, xval in enumerate(new_gridpoints):
                     if i == 0:
                         plt.axvline(x=xval, color='red', linestyle='-', linewidth=0.8, alpha=0.6, label='New grid')
                     else:
-                        plt.axvline(x=xval, color='red', linestyle='-', linewidth=0.8, alpha=0.6)
+                        if folding[idim] > 1 and folding[idim] < nintervals and i % (nintervals / folding[idim]) == 0:
+                            plt.axvline(x=xval, color="#EE00FFFF", linestyle='-', linewidth=2.0, alpha=1.0)
+                        else:
+                            plt.axvline(x=xval, color='red', linestyle='-', linewidth=0.8, alpha=0.6)
+
                 # Try to restore the original function:
                 dxaccdx = []
                 for i in range(len(xacc)-1):
@@ -149,9 +162,16 @@ if __name__ == "__main__":
         type=Path,
         help="Input topdrawer file(s) for grid, supports glob patterns (e.g. pwg-xg2-xgrid-btl-*.top)"
     )
+    parser.add_argument(
+        "-f", "--folding",
+        nargs="*",
+        type=float,
+        default=None,
+        help="Optional list of numbers (one per dimension or less)."
+    )
 
     args = parser.parse_args()
 
     for infile in args.input:
         output = infile.with_suffix('.pdf')
-        plot_grids_to_pdf(infile, output)
+        plot_grids_to_pdf(infile, output, args.folding)
