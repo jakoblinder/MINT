@@ -30,7 +30,7 @@
 *.exe
 *.out
 *.app
-gauss
+integrate
 
 # Plot files
 *.pdf
