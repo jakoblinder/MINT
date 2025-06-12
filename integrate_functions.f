@@ -21,35 +21,39 @@
          character(len=30) :: file_events
          integer :: unit_events
 
-
-         logical :: flg_integration, flg_2dintegration, flg_generation
-
          ! Timer variables
          real*8 :: t_start, t_end
 
-         flg_integration   = .true.
+         logical :: flg_gridsetup, flg_integration, flg_2dintegration, flg_generation
+
+         flg_gridsetup     = .true.
+         flg_integration   = .false.
          flg_2dintegration = .false.
          flg_generation    = .false.
 
+         if (flg_gridsetup .or. flg_integration .or. flg_2dintegration .or. flg_generation) then
+            ! Number of points to improve the grid:
+            ncall1 = 1d6
+            ! Number of grid improvement iterations (MaXimum number of ITerations to improve the grid):
+            itmx1  = 5
 
-         ! Number of points to improve the grid:
-         ncall1 = 1000000
-         ! Number of grid improvement iterations (MaXimum number of ITerations to improve the grid):
-         itmx1  = 5
+            ! Set up the grid
+            call cpu_time(t_start)
 
-         ! Set up the grid
-         call cpu_time(t_start)
-         call mint(func_wrap, ndim, ncall1, itmx1, 0, xgrid, xint, ymax, intabs_val, intabs_err)
-         call cpu_time(t_end)
-         write(*,*) 'Integral over the absolute value of the function:'
-         write(*,*) 'Int[ |f| ]: ', intabs_val, ' +- ', intabs_err
-         ! Note: xint == intabs_val, since the function is integrated over the absolute value and xint is used as
-         !       the initial value for computing the upper bound of the function in the next, imode = 1, step,
-         !       where xint will be an input, not an output.
-         write(*,*) 'Grid setup time (s): ', t_end - t_start
-         ! write(*,*) xgrid(:,1)
+            call mint(func_wrap, ndim, ncall1, itmx1, 0, xgrid, xint, ymax, intabs_val, intabs_err)
 
-         if (flg_integration) then
+            call cpu_time(t_end)
+            write(*,*) 'Integral over the absolute value of the function:'
+            write(*,*) 'Int[ |f| ]: ', intabs_val, ' +- ', intabs_err
+            ! Note: xint == intabs_val, since the function is integrated over the absolute value and xint is used as
+            !       the initial value for computing the upper bound of the function in the next, imode = 1, step,
+            !       where xint will be an input, not an output.
+            write(*,'(A,F8.3,A)') 'Grid setup time: ', t_end - t_start, ' s'
+            ! write(*,*) xgrid(:,1)
+         end if
+
+
+         if (flg_integration .or. flg_generation) then
             ! Setup folding:
             ! Notice that you can only fold by divisors of 50, since this is the number of points in the grid.
             ! Moreover, folding one dimension by e.g. 5 means the integration will take 5 times longer, since it will
@@ -82,11 +86,8 @@
             write(*,*) estimn,' +- ', errorn
 
             write(*,*) (estimp + estimn),' +- ', sqrt(errorp**2 + errorn**2)
-            write(*,*) 'Integration time (s): ', t_end - t_start
+            write(*,'(A,F8.3,A)') 'Integration time: ', t_end - t_start, ' s'
          end if
-
-
-
 
 
          if (flg_generation) then
@@ -173,7 +174,7 @@
             write(*,*) estimn,' +- ', errorn
 
             write(*,*) (estimp+estimn),' +- ', sqrt(errorp**2+errorn**2)
-            write(*,*) '2D Integration time (s): ', t_end - t_start
+            write(*,'(A,F8.3,A)') '2D Integration time: ', t_end - t_start, ' s'
          end if
 
          contains
