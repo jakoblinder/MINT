@@ -13,11 +13,13 @@ The MINT Fortran implementation is taken from [https://virgilio.mib.infn.it/~nas
 ## Structure
 
 - `integrate_functions.f`: Main Fortran program for grid setup, integration, and event generation.
-- `mint-integrator.f`, `functions.f`, `cernroutines.f`, `random.f`: Supporting Fortran source files.
+- `functions.f`: Module were the integrated functions and used mappings are defined.
+- `mint-integrator.f`: MINT integrator itself.
+- `random.f`: Random number generator.
+- `cernroutines.f`, `random.f`: Supporting Fortran source files.
 - `Makefile`: Build instructions.
 - `plotgrid/plot_topdrawer_grid_classic.py`: Python script to visualize topdrawer grid files as PDF - exactly as it is written in the topdrawer file.
 - `plotgrid/plot_topdrawer_grid_useful.py`:  Python script to visualize topdrawer grid files as PDF, using the information from the topdrawer file but showing more useful stuff.
-- `plotgrid/pwg-xg2-xgrid-btl-0050.top`: Example topdrawer grid file.
 - `LICENSE`: GNU GPL v3 license.
 
 ## Build Instructions
