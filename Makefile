@@ -19,12 +19,12 @@ vpath %.h ../
 	$(FF) -c $<
 
 
-gauss: integrate_functions.o mint-integrator.o functions.o cernroutines.o random.o
+integrate: integrate_functions.o mint-integrator.o functions.o cernroutines.o random.o
 	$(FF) $^ -o $@
 
 
 clean:
-	rm -f *.o *.mod gauss
+	rm -f *.o *.mod integrate
 
 
 integrate_functions.o: functions.o
