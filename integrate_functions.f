@@ -44,7 +44,7 @@
 
             call cpu_time(t_end)
             write(*,*) 'Integral over the absolute value of the function:'
-            write(*,*) 'Int[ |f| ]: ', intabs_val, ' +- ', intabs_err
+            write(*,'(A,G14.6,A,G12.6)') 'Int[ |f| ]: ', intabs_val, ' +- ', intabs_err
             ! Note: xint == intabs_val, since the function is integrated over the absolute value and xint is used as
             !       the initial value for computing the upper bound of the function in the next, imode = 1, step,
             !       where xint will be an input, not an output.
@@ -59,13 +59,13 @@
             ! Moreover, folding one dimension by e.g. 5 means the integration will take 5 times longer, since it will
             ! call the integrated function 5 times more often in that dimension. Folding by 5 in 2 dimensions will
             ! take 25 times longer, etc..
-            ifold(1)=1
-            ifold(2)=1
-            ifold(3)=1
-            ifold(4)=1
+            ifold(1) = 1
+            ifold(2) = 1
+            ifold(3) = 1
+            ifold(4) = 1
 
             ! Number of points used for the integration:
-            ncall2=100000
+            ncall2=1d6
             ! Number of integration iterations and upper bound improvements, all done with a number of calls ncall2 to the
             ! integrated function. The different integrand results are combined and only the final result is returned.
             ! Note that this basically corresponds to increasing the number of calls ncall2 by a factor of itmx2.
@@ -82,10 +82,11 @@
             negflag = .false.
 
             call cpu_time(t_end)
-            write(*,*) estimp,' +- ', errorp
-            write(*,*) estimn,' +- ', errorn
 
-            write(*,*) (estimp + estimn),' +- ', sqrt(errorp**2 + errorn**2)
+            write(*,'(A,G14.6,A,G12.6)') 'Positive contribution: ', estimp, ' +- ', errorp
+            write(*,'(A,G14.6,A,G12.6)') 'Negative contribution: ', estimn, ' +- ', errorn
+            write(*,'(A,G14.6,A,G12.6)') 'Total integral:        ', estimp + estimn, ' +- ', sqrt(errorp**2 + errorn**2)
+
             write(*,'(A,F8.3,A)') 'Integration time: ', t_end - t_start, ' s'
          end if
 
