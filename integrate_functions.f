@@ -33,7 +33,7 @@
 
          if (flg_gridsetup .or. flg_integration .or. flg_2dintegration .or. flg_generation) then
             ! Number of points to improve the grid:
-            ncall1 = 1d6
+            ncall1 = 1d5
             ! Number of grid improvement iterations (MaXimum number of ITerations to improve the grid):
             itmx1  = 5
 
