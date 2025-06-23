@@ -102,6 +102,8 @@ def plot_grids_to_pdf(topdrawer_file, pdf_file, folding=None):
             folding = [int(fold_tmp[i]) if i < len(fold_tmp) else 1 for i in range(len(grids))]
             folding = folding[::-1]  # Reverse it to match the desired order.
             assert all([nintervals%f == 0 for f in folding]), "The folding factors must be a divisor of the number of intervals."
+        else:
+            folding = [1] * len(grids)
         for idim, ((x, y), title, join_lines, lim, scatter) in enumerate(zip(grids, titles, gridlines, limits, scatter_flags)):
             plt.figure()
             # Plot as scatter if plot symbol is present, else as line
