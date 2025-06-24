@@ -1,7 +1,10 @@
 # MINT Integrator
 
 This project provides an example of how to use the original Fortran implementation of the MINT (Monte Carlo INTegrator) algorithm, along with utilities for grid setup, integration, event generation, and visualization of integration grids.
-The MINT Fortran implementation is taken from [https://virgilio.mib.infn.it/~nason/POWHEG/FNOpaper/](https://virgilio.mib.infn.it/~nason/POWHEG/FNOpaper/).
+The MINT Fortran implementation is taken from [https://virgilio.mib.infn.it/~nason/POWHEG/FNOpaper/](https://virgilio.mib.infn.it/~nason/POWHEG/FNOpaper/) and is described in [0709.2085](https://arxiv.org/abs/0709.2085).
+
+If you want to read more about the original Vegas algorithm, Paolo cites two papers by G. Peter Lepage: [Vegas Paper](https://doi.org/10.1016/0021-9991(78)90004-9) & [Vegas Manual](https://inspirehep.net/literature/153221).
+Should you want to read a bit more about the event generation, especially how the hit and miss method is working and are a bit overwhelmed by [0709.2092](https://arxiv.org/abs/0709.2092), maybe [hep-ph/0606275](https://arxiv.org/abs/hep-ph/0606275) could be worth having a look at.
 
 ## Features
 
@@ -47,7 +50,7 @@ To plot the integration grid(s) from a topdrawer file:
 ```sh
 python3 plotgrid/plot_topdrawer_grid.py xg*.top
 ```
-This will create a multi-page PDF with each page showing the grid and function for one dimension.
+This will create a multi-page PDF with each page showing the grid and function for one dimension. You can also add lines, showing where the folding is done. You get a description for that by invoking the help message of the python program. Keep in mind, that the shown function in the produced plots, shows the absolut value of the function, not the function itself.
 
 ## License
 
