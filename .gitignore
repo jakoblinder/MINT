@@ -34,4 +34,8 @@ integrate
 
 # Plot files
 *.pdf
+!JC_Notes.pdf
 *.top
+events.dat
+!plotgrid/example_grid/*.top
+!plotgrid/example_grid/*.pdf

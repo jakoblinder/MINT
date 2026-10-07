@@ -1,13 +1,20 @@
+! Copyright (C) 2025 Jakob Linder
+! SPDX-License-Identifier: GPL-2.0-only
       program integrate_functions
+         ! Example driver for the MINT integrator: integrates the function defined in functions.f
+         ! (func_wrap) in ndim dimensions. Choose the steps to run with the flags below.
          use functions
          implicit none
-         integer :: i, j, pdim, ndim, nevents, ncall1, itmx1, ncall2, itmx2
-         parameter (ndim=4, pdim=1)
-         real*8 :: xgrid(0:50,ndim), xint, ymax(50,ndim), intabs_val, intabs_err, estimn, errorn, estimp, errorp
-         real*8 :: xgenerated(pdim), xtransformed(pdim), xmin, xmax
+         integer :: ndim
+         common/cndim/ndim
+         integer :: ncall1, itmx1, ncall2, itmx2, nevents, ievent, i
+         real*8 :: xgrid(0:50,ndimmax), xint, ymax(50,ndimmax)
+         real*8 :: intabs_val, intabs_err, estimn, errorn, estimp, errorp
+         real*8 :: xgenerated(ndimmax), xtransformed(ndimmax), efficiency(ndimmax)
+         real*8 :: xmin, xmax
          common/bounds/xmin, xmax
 
-         integer ifold(ndim)
+         integer ifold(ndimmax)
          common/cifold/ifold
          logical negflag ! If true, the function is returning only non zero if it is negative and vice versa.
          common/cnegflag/negflag
@@ -18,7 +25,7 @@
          character(len=30) :: map_type
          common /maptypeblock/ map_type
 
-         character(len=30) :: file_events
+         character(len=*), parameter :: file_events = 'events.dat'
          integer :: unit_events
 
          ! Timer variables
@@ -26,10 +33,24 @@
 
          logical :: flg_gridsetup, flg_integration, flg_2dintegration, flg_generation
 
-         flg_gridsetup     = .true.
-         flg_integration   = .false.
-         flg_2dintegration = .false.
-         flg_generation    = .false.
+         ! Number of dimensions of the integral, at most ndimmax (set in ndimmax.inc).
+         ndim = 4
+
+         ! Integrate the indicator function of the ndim dimensional ball (sphere) with radius sphere_radius
+         ! instead of the function selected in func_wrap. The exact result is the volume of the ball.
+         ! Note: this only works reliably up to ndim = 12. The fraction of the cube [-r, r]^ndim covered by the
+         ! ball falls quickly with ndim (about 2.5e-8 for ndim = 20), and MINT can only adapt its grid to points
+         ! that hit the ball. For larger ndim the result is wrong or NaN.
+         flg_sphere    = .false.
+         sphere_radius = 1d0
+
+         if (ndim < 1 .or. ndim > ndimmax) stop 'ndim has to be between 1 and ndimmax'
+
+         ! Steps to run (each step needs the grid, so the grid setup is always run):
+         flg_gridsetup     = .true.  ! Adapt the grid to |f| and compute the integral of |f|.
+         flg_integration   = .false. ! Integrate f itself (positive and negative part separately) on the frozen grid.
+         flg_2dintegration = .false. ! Fix the first two variables and integrate over the other two.
+         flg_generation    = .false. ! Generate unweighted events (implies the integration step).
 
          if (flg_gridsetup .or. flg_integration .or. flg_2dintegration .or. flg_generation) then
             ! Number of points to improve the grid:
@@ -49,7 +70,7 @@
             !       the initial value for computing the upper bound of the function in the next, imode = 1, step,
             !       where xint will be an input, not an output.
             write(*,'(A,F8.3,A)') 'Grid setup time: ', t_end - t_start, ' s'
-            ! write(*,*) xgrid(:,1)
+            if (flg_sphere) write(*,'(A,I0,A,G14.6)') 'Exact volume of the ', ndim, '-ball: ', ball_volume(ndim, sphere_radius)
          end if
 
 
@@ -59,27 +80,25 @@
             ! Moreover, folding one dimension by e.g. 5 means the integration will take 5 times longer, since it will
             ! call the integrated function 5 times more often in that dimension. Folding by 5 in 2 dimensions will
             ! take 25 times longer, etc..
-            ifold(1) = 1
-            ifold(2) = 1
-            ifold(3) = 1
-            ifold(4) = 1
+            ifold(:) = 1
 
             ! Number of points used for the integration:
-            ncall2=1d6
+            ncall2 = 1d6
             ! Number of integration iterations and upper bound improvements, all done with a number of calls ncall2 to the
             ! integrated function. The different integrand results are combined and only the final result is returned.
             ! Note that this basically corresponds to increasing the number of calls ncall2 by a factor of itmx2.
-            itmx2=5
+            itmx2 = 5
 
             call cpu_time(t_start)
 
-            ! Compute the positive contribution to the integral:
-            negflag = .false.
-            call mint(func_wrap, ndim, ncall2, itmx2, 1, xgrid, xint, ymax, estimp, errorp)
             ! Compute the negative contribution to the integral:
             negflag = .true.
             call mint(func_wrap, ndim, ncall2, itmx2, 1, xgrid, xint, ymax, estimn, errorn)
+            ! Compute the positive contribution to the integral. This is done last on purpose: every call of mint
+            ! with imode=1 overwrites the upper bounds ymax, and the event generation below needs those of the
+            ! positive part.
             negflag = .false.
+            call mint(func_wrap, ndim, ncall2, itmx2, 1, xgrid, xint, ymax, estimp, errorp)
 
             call cpu_time(t_end)
 
@@ -91,54 +110,43 @@
          end if
 
 
+         if (flg_generation .and. estimp <= 0d0) then
+            ! gen would loop forever, since the upper bounds ymax of the positive part are zero.
+            write(*,*) 'No positive contribution found, skipping the event generation.'
+            flg_generation = .false.
+         end if
+
          if (flg_generation) then
-            ! Generate random numbers according to the grid.
-            ! The function gen is used to generate random numbers according to the function specified in func_wrap.
-            ! Inputs:
-            ! 1. func_wrap - contains the function according to which the random numbers are generated.
-            ! 2. pdim      - dimension of the random numbers to be generated (1 in this case). TODO: Specify which dimension is used.
-            ! 3. xgrid     - the integration grid.
-            ! 4. ymax      - the maximum value of the function on the grid
-            ! 5. ifl - if 0, it generates random numbers, if 1, it generates events, if 2, it generates events with weights, if 3, it generates events with weights and writes them to a file.
-            ! Output:
-            ! 1. xgenerated - generated random number of dimension pdim.
+            ! Generate unweighted points distributed according to the positive part of the function (hit and miss).
+            ! The routine gen needs the grid and the upper bounds ymax, both set up above.
+            ! Arguments of gen(fun, ndim, xgrid, ymax, imode, x):
+            !   imode = 0: initialise, imode = 1: generate one point x(1:ndim) in [0,1]^ndim,
+            !   imode = 3: return the generation efficiency in x(1).
+            nevents = 1000
+            write(*,*) 'Generating ', nevents, ' events and writing them to file: ', file_events
+            open(newunit=unit_events, file=file_events, status='replace')
 
-            write(*,*) "Initialise generation of random numbers:"
-            call gen(func_wrap, pdim, xgrid, ymax, 0, xgenerated)
+            call gen(func_wrap, ndim, xgrid, ymax, 0, xgenerated)
+            do ievent = 1, nevents
+               call gen(func_wrap, ndim, xgrid, ymax, 1, xgenerated)
+               ! Map the generated numbers from [0,1] to the integration region:
+               do i = 1, ndim
+                  xtransformed(i) = mapping(xgenerated(i), map_type)
+               end do
+               write(unit_events,*) xtransformed
+            end do
+            close(unit_events)
 
-            file_events = 'events.lhe'
-            ! open(newunit=unit_events, file=trim(file_events), status='unknown')
-
-            nevents = 1
-            write(*,*) "Generating ", nevents, " events and writing them to file: ", trim(file_events)
-            call gen(func_wrap, 1, xgrid, ymax, 1, xgenerated)
-            write(*,*) xgenerated
-            ! do i = 1, nevents
-            !    call gen(func_wrap, pdim, xgrid, ymax, 1, xgenerated)
-            !    ! do j=1, pdim
-            !    !    xtransformed(j) = mapping(xgenerated(j), map_type)
-            !    ! end do
-            !    xtransformed = xmin + (xmax - xmin) * xgenerated
-            !    ! write(unit_events,*) xtransformed
-            !    write(*,*) xtransformed
-            !    ! if (mod(i, 1000) == 0) then
-            !    !    write(*,*) 'Events written: ', i
-            !    !    close(unit_events)
-            !    !    call sleep(1)
-            !    !    open(newunit=unit_events, file=trim(file_events), status='unknown', position='append')
-            !    ! end if
-            ! end do
-            ! ! close(unit_events)
-
-            write(*,*) "Finished generating events."
-            call gen(func_wrap, pdim, xgrid, ymax, 3, xgenerated)
+            call gen(func_wrap, ndim, xgrid, ymax, 3, efficiency)
+            write(*,'(A,F8.4)') 'Generation efficiency: ', efficiency(1)
          end if
 
 
          if (flg_2dintegration) then
-            ! Since we are able to integrate all 4 dimensions, what about setting the first two to a specific
-            ! value and integrating over the remaining 2?
-            write(*,*) "Consider 2D now:"
+            ! Since we are able to integrate all dimensions, what about setting the first two to a specific
+            ! value and integrating over the remaining ndim-2?
+            write(*,*) "Fixing the first two variables, integrating over the remaining ", ndim-2
+            if (ndim < 3) stop 'the 2D integration needs ndim >= 3'
             ! Set value of first two x:
             x12 = [0.45d0, 0.55d0]
             ! Note that we remapped all numbers with
@@ -148,46 +156,37 @@
             ! This mapping should be inverted here if we want to set the first two values to a specific value:
             x12 = [inverseMapping(x12(1), map_type), inverseMapping(x12(2), map_type)]
 
-
-            ! The integration grid can be kept! It should be optimal also for the remaining two dimensions.
-
-   !          ncall1=1000000
-   !          itmx1=5
-   !          ! set up the grid
-   !          call mint(func2d,2,ncall1,itmx1,0,xgrid,xint,ymax,sigtot,error)
-   !          write(*,*) sigtot, error
-
-            ! Only redo the integration for the remaining two dimensions.
-            ifold(1)=1
-            ifold(2)=1
-            ifold(3)=1
-            ifold(4)=1
-            ncall2=1000000
-            itmx2=5
+            ! The integration grid can be kept! It should be optimal also for the remaining dimensions.
+            ! Only redo the integration for the remaining dimensions.
+            ifold(:) = 1
+            ncall2 = 1000000
+            itmx2 = 5
 
             call cpu_time(t_start)
-            negflag=.true.
-            call mint(func2d, 2, ncall2, itmx2, 1, xgrid, xint, ymax, estimn, errorn)
-            negflag=.false.
-            call mint(func2d, 2, ncall2, itmx2, 1, xgrid, xint, ymax, estimp, errorp)
+            negflag = .true.
+            call mint(func2d, ndim-2, ncall2, itmx2, 1, xgrid, xint, ymax, estimn, errorn)
+            negflag = .false.
+            call mint(func2d, ndim-2, ncall2, itmx2, 1, xgrid, xint, ymax, estimp, errorp)
             call cpu_time(t_end)
-            write(*,*) estimp,' +- ', errorp
-            write(*,*) estimn,' +- ', errorn
 
-            write(*,*) (estimp+estimn),' +- ', sqrt(errorp**2+errorn**2)
-            write(*,'(A,F8.3,A)') '2D Integration time: ', t_end - t_start, ' s'
+            write(*,'(A,G14.6,A,G12.6)') 'Positive contribution: ', estimp, ' +- ', errorp
+            write(*,'(A,G14.6,A,G12.6)') 'Negative contribution: ', estimn, ' +- ', errorn
+            write(*,'(A,G14.6,A,G12.6)') 'Total integral:        ', estimp + estimn, ' +- ', sqrt(errorp**2 + errorn**2)
+            write(*,'(A,F8.3,A)') 'Integration time: ', t_end - t_start, ' s'
          end if
 
          contains
             function func2d(x,weight,ifl)
-               ! This function is a 2D version of the gauss function in the style needed for the mint integration routine.
-               ! x12 are given in a common block and are the first two values of x.
-               ! I guess they need to be given like that, because the mint routine is not able to pass additional arguments to the function?
+               ! Version of func_wrap in the style needed by mint with the first two variables fixed to x12 (given
+               ! in a common block, since mint cannot pass additional arguments to the function); x are the
+               ! remaining ndim-2 variables.
                implicit none
-               real*8, intent(in) :: x(2), weight
+               real*8, intent(in) :: x(*), weight
                integer, intent(in) :: ifl
                real*8 :: func2d, jac
                integer :: i
+               integer :: ndim
+               common/cndim/ndim
 
                real*8 :: x12(2)
                common/xset/x12
@@ -195,12 +194,11 @@
                character(len=30) :: map_type
                common /maptypeblock/ map_type
 
-               func2d = func_wrap([x12(1), x12(2), x(1), x(2)], weight, ifl)
-               ! Since the gauss function is 4 dimensional, also the jacobian is multiplied 4 times.
-               ! This is not correct, because we are only integrating over 2 dimensions.
+               func2d = func_wrap([x12(1), x12(2), x(1:ndim-2)], weight, ifl)
+               ! func_wrap multiplies the jacobian of all variables, but the first two are not integrated over.
                jac = 1d0
                do i=1, size(x12)
-                  jac = jac * jacobian(x(i), map_type)
+                  jac = jac * jacobian(x12(i), map_type)
                end do
                func2d = func2d / jac
             end function func2d

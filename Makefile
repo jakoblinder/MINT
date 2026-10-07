@@ -1,31 +1,38 @@
+# Copyright (C) 2025 Jakob Linder
+# SPDX-License-Identifier: GPL-2.0-only
+# Usage:
+#   make            optimised build of ./integrate
+#   make DEBUG=1    debug build (floating point traps, run time checks, backtraces)
+#   make clean
+#
+# -fno-automatic is required by the legacy Fortran 77 code (variables are static).
+# Note: -fbounds-check causes a weird error due to the non-lazy evaluation of booleans in gfortran.
+FC     = gfortran
+FFLAGS = -fno-automatic -ffixed-line-length-none
 
-# -fbounds-check causes a weird error due to non-lazy evaluation of bolean in gfortran
-F77= gfortran -Wall -fno-automatic -ffixed-line-length-none # -fbounds-check
+ifdef DEBUG
+FFLAGS += -O -g -ggdb -ffpe-trap=invalid,zero,overflow -fcheck=all -finit-real=nan -fbacktrace -Wall
+else
+FFLAGS += -O2 -w  # -w: silence warnings of the legacy third-party files
+endif
 
-## For debugging uncomment the following
-DEBUG= -O -ggdb -ffpe-trap=invalid,zero,overflow -fcheck=all -g -O -finit-real=nan -fbacktrace
+OBJS = integrate_functions.o functions.o mint-integrator.o cernroutines.o random.o
 
-FF=$(F77) $(OPT) $(DEBUG)
+.PHONY: all clean
 
+all: integrate
 
-INCLUDE =
+integrate: $(OBJS)
+	$(FC) $(FFLAGS) $^ -o $@
 
+%.o: %.f
+	$(FC) $(FFLAGS) -c $<
 
-vpath %.f ../
-vpath %.c ../
-vpath %.h ../
+# integrate_functions uses the module defined in functions.f
+integrate_functions.o: functions.o
 
-%.o: %.f $(INCLUDE)
-	$(FF) -c $<
-
-
-integrate: integrate_functions.o mint-integrator.o functions.o cernroutines.o random.o
-	$(FF) $^ -o $@
-
+# the maximum number of dimensions is set in ndimmax.inc
+functions.o mint-integrator.o: ndimmax.inc
 
 clean:
 	rm -f *.o *.mod integrate
-
-
-integrate_functions.o: functions.o
-integrate_functions.o: mint-integrator.o

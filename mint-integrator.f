@@ -1,3 +1,15 @@
+! MODIFIED VERSION. Original: MINT integrator of the POWHEG BOX (Paolo Nason et al.), see
+! arXiv:0709.2085 and https://virgilio.mib.infn.it/~nason/POWHEG/FNOpaper/mint-integrator.f
+! Modifications w.r.t. that version, all by Jakob Linder:
+!  2025-06-06  (state when added to this repository) Comments converted to free-form style and extended; typo fixes; x is initialised;
+!              removed the debugging output of vtot, etot.
+!  2025-06-11  The grid of every iteration is written to its own topdrawer file xg<iteration>.top
+!              (subroutines regridplotopen, regridplotclose; title line with the dimension added
+!              in regrid), to visualise the grid adaption with plotgrid/plot_topdrawer_grid.py.
+!  2026-10-07  The maximum number of dimensions ndimmax is raised from 6 to 20 and is now defined once in
+!              the include file ndimmax.inc (used in mint and gen), to allow the integration of a
+!              d-dimensional sphere with d up to 20 in the example.
+!
 ! Integrator Package for POWHEG
 ! subroutine mint(fun,ndim,ncalls0,nitmax,imode,xgrid,xint,ymax,ans,err)
 
@@ -90,8 +102,9 @@
 ! imode=1: frozen grid, compute the integral and the upper bounds
 ! others: same as 1 (for now)
       implicit none
-      integer nintervals,ndimmax
-      parameter (nintervals=50,ndimmax=6)
+      integer nintervals
+      parameter (nintervals=50)
+      include 'ndimmax.inc'
       integer ncalls0,ndim,nitmax,imode
       real * 8 fun,xgrid(0:nintervals,ndim),xint,ymax(nintervals,ndim),
      #  ans,err
@@ -386,8 +399,9 @@
 ! imode=3 store generation efficiency in x(1)
       implicit none
       integer ndim,imode
-      integer nintervals,ndimmax
-      parameter (nintervals=50,ndimmax=6)
+      integer nintervals
+      parameter (nintervals=50)
+      include 'ndimmax.inc'
       real * 8 fun,xgrid(0:nintervals,ndim),
      #         ymax(nintervals,ndim),x(ndim)
       real * 8 dx(ndimmax)
