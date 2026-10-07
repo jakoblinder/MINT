@@ -16,6 +16,9 @@ else
 FFLAGS += -O2 -w  # -w: silence warnings of the legacy third-party files
 endif
 
+# Sources: own code in src/, third-party POWHEG code in third_party/powheg/
+vpath %.f src third_party/powheg
+
 OBJS = integrate_functions.o functions.o mint-integrator.o cernroutines.o random.o
 
 .PHONY: all clean
@@ -31,8 +34,8 @@ integrate: $(OBJS)
 # integrate_functions uses the module defined in functions.f
 integrate_functions.o: functions.o
 
-# the maximum number of dimensions is set in ndimmax.inc
-functions.o mint-integrator.o: ndimmax.inc
+# the maximum number of dimensions is set in src/ndimmax.inc
+functions.o mint-integrator.o: src/ndimmax.inc
 
 clean:
 	rm -f *.o *.mod integrate

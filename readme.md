@@ -8,18 +8,19 @@ MINT is described in [arXiv:0709.2085](https://arxiv.org/abs/0709.2085) and is a
 ([Lepage 1978](https://doi.org/10.1016/0021-9991(78)90004-9), [manual](https://inspirehep.net/literature/153221)).
 For the hit-and-miss event generation see [arXiv:0709.2092](https://arxiv.org/abs/0709.2092); for a gentler
 introduction to it see [hep-ph/0606275](https://arxiv.org/abs/hep-ph/0606275).
-`JC_Notes.pdf` are handwritten notes of a journal club talk on the topic.
+Notes of a journal club talk on the topic are in `docs/JC_Notes.pdf`.
 
-## Files
+## Structure
 
-| File | Content |
+| Path | Content |
 | --- | --- |
-| `integrate_functions.f` | Main program: grid setup, integration, 2D integration, event generation (select with the flags at the top). |
-| `functions.f` | The integrand and the variable mappings; edit the preset block in `func_wrap` to change the integrand. |
-| `ndimmax.inc` | Maximum number of dimensions, shared by `functions.f` and `mint-integrator.f`. |
+| `src/integrate_functions.f` | Main program: grid setup, integration, 2D integration, event generation (select with the flags at the top). |
+| `src/functions.f` | The integrand and the variable mappings; edit the preset block in `func_wrap` to change the integrand. |
+| `src/ndimmax.inc` | Maximum number of dimensions, shared by `functions.f` and `mint-integrator.f`. |
+| `third_party/powheg/` | MINT integrator, random number generator and CERNLIB routines (not written by me, see below). |
+| `plotgrid/` | Script to plot the grid files `xg*.top` written by MINT as PDF, and example grids. |
+| `docs/JC_Notes.pdf` | Handwritten notes of a journal club talk on the topic. |
 | `Makefile` | Build instructions. |
-| `plotgrid/plot_topdrawer_grid.py` | Plots the grid files `xg*.top` written by MINT as PDF. |
-| `mint-integrator.f`, `random.f`, `cernroutines.f` | Third-party code (`mint-integrator.f` modified), see below. |
 
 ## Build and run
 
@@ -31,7 +32,7 @@ make DEBUG=1    # debug build with floating point traps and run time checks
 ./integrate
 ```
 
-The number of dimensions `ndim` is set in `integrate_functions.f` (at most `ndimmax`, set in `ndimmax.inc`, default 20).
+The number of dimensions `ndim` is set in `src/integrate_functions.f` (at most `ndimmax`, set in `src/ndimmax.inc`, default 20).
 With `flg_sphere = .true.` the volume of an `ndim`-dimensional ball is integrated and compared with the exact value;
 otherwise the preset in `func_wrap` is used.
 
@@ -40,7 +41,7 @@ otherwise the preset in `func_wrap` is used.
 > (even with 3e8 calls per iteration at `ndim = 20`) and the result is wrong or NaN.
 
 By default only the grid setup is run. Enable the integration, 2D integration or event generation by setting the
-`flg_*` flags in `integrate_functions.f` and recompiling. The run writes one grid file `xg<i>.top` per grid iteration;
+`flg_*` flags in `src/integrate_functions.f` and recompiling. The run writes one grid file `xg<i>.top` per grid iteration;
 generated events go to `events.dat`.
 
 ## Grid visualisation
@@ -68,16 +69,12 @@ Adding `-f 2 5 10` additionally marks the folding blocks of the last three dimen
 
 ## Third-party code and license
 
-`mint-integrator.f`, `random.f` and `cernroutines.f` are taken from the
+`third_party/powheg/` contains `mint-integrator.f`, `random.f` and `cernroutines.f` from the
 [POWHEG BOX](https://powhegbox.mib.infn.it/) / [MINT page](https://virgilio.mib.infn.it/~nason/POWHEG/FNOpaper/) by
-Paolo Nason and collaborators; `cernroutines.f` consists of routines from CERNLIB. They keep their original copyright.
-The POWHEG software is distributed under the GPL version 2 and subject to the
-[MCNET guidelines](https://powhegbox.mib.infn.it/MCNET-GUIDELINES), see
-[the license note](https://powhegbox.mib.infn.it/AAAREADME-LICENSE). If you use this code, please cite
+Paolo Nason and collaborators (`cernroutines.f` consists of routines from CERNLIB). They keep their original copyright
+and are distributed under the GPL version 2 and the [MCNET guidelines](https://powhegbox.mib.infn.it/MCNET-GUIDELINES),
+see [the license note](https://powhegbox.mib.infn.it/AAAREADME-LICENSE). If you use this code, please cite
 [arXiv:0709.2085](https://arxiv.org/abs/0709.2085) and [arXiv:0709.2092](https://arxiv.org/abs/0709.2092).
-
-- `random.f` and `cernroutines.f` are included as obtained, not modified in this repository.
-- **`mint-integrator.f` is a modified version.** The changes (extended comments, one grid file `xg<i>.top` per
-  iteration for the plots, and `ndimmax` raised from 6 to 20, set in `ndimmax.inc`) are listed in the header of the file.
+**`mint-integrator.f` is a modified version**; details are in `third_party/powheg/README.md` and in the file header.
 
 The remaining files are licensed under the GNU General Public License version 2 (see `LICENSE`).

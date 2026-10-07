@@ -7,7 +7,7 @@
 !              (subroutines regridplotopen, regridplotclose; title line with the dimension added
 !              in regrid), to visualise the grid adaption with plotgrid/plot_topdrawer_grid.py.
 !  2026-10-07  The maximum number of dimensions ndimmax is raised from 6 to 20 and is now defined once in
-!              the include file ndimmax.inc (used in mint and gen), to allow the integration of a
+!              the include file src/ndimmax.inc (used in mint and gen), to allow the integration of a
 !              d-dimensional sphere with d up to 20 in the example.
 !
 ! Integrator Package for POWHEG
@@ -104,7 +104,7 @@
       implicit none
       integer nintervals
       parameter (nintervals=50)
-      include 'ndimmax.inc'
+      include '../../src/ndimmax.inc'
       integer ncalls0,ndim,nitmax,imode
       real * 8 fun,xgrid(0:nintervals,ndim),xint,ymax(nintervals,ndim),
      #  ans,err
@@ -401,7 +401,7 @@
       integer ndim,imode
       integer nintervals
       parameter (nintervals=50)
-      include 'ndimmax.inc'
+      include '../../src/ndimmax.inc'
       real * 8 fun,xgrid(0:nintervals,ndim),
      #         ymax(nintervals,ndim),x(ndim)
       real * 8 dx(ndimmax)
